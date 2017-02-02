@@ -1,6 +1,5 @@
 % Bryan Perozzi
-function [weighted_score, raw_score, data_score, internal_edges, external_edges, internal_score, boundary_score] = ... 
-    amen_objective_wrapper (A, X, community, weights, degrees, M, objective_fn, use_community_features, X_Transpose, continuous_features)
+function [normalized_score, raw_score, data_score, internal_edges, external_edges, internal_score, boundary_score] = amen_objective_wrapper (A, X, community, weights, degrees, M, objective_fn, use_community_features, X_Transpose)
 % input: 
 %   A, an undirected graph
 %   X, a feature matrix
@@ -13,7 +12,7 @@ function [weighted_score, raw_score, data_score, internal_edges, external_edges,
      end
      
      if nargin < 7
-         objective_fn = @amen_objective;
+         objective_fn = @obj_final_k;
      end
 
      if nargin < 8
@@ -23,28 +22,15 @@ function [weighted_score, raw_score, data_score, internal_edges, external_edges,
      if nargin < 9
          X_Transpose = X';
      end
-     
-     if nargin < 10
-        continuous_features = 0;
-     end
-     
-     
-     if continuous_features == 1
-         % normalize features -- columns of X (the rows of X_transpose), so big feature values don't blow up vs
-         % small ones in dot product
-         
-         mins = min(X_Transpose, [], 2);
-         maxs =  max(X_Transpose, [], 2);
-         maxs = maxs-mins;
-         
-         X_Transpose_Normalized = (X_Transpose - mins(:,ones(1, size(X_Transpose,2)))) ./ maxs(:,ones(1, size(X_Transpose,2)));
-     else
-         % no normalization needed for binary features
-         X_Transpose_Normalized = X_Transpose
-     end
 
-    [weighted_score, raw_score, internal_edges, external_edges, internal_score, boundary_score] = ... 
-        objective_fn(A, X_Transpose_Normalized, community, weights, degrees, m, use_community_features, continuous_features);
-    
-    data_score = raw_score;
+     if ~isequal(objective_fn, @amen_objective_learn_normalized)
+    [normalized_score, raw_score, ...
+        data_score, internal_edges, ...
+        external_edges, internal_score, ... 
+        boundary_score] = objective_fn(A, X_Transpose, community, weights, degrees, m, use_community_features);
+     else
+    [raw_score, data_score, ...
+        internal_edges, external_edges] = objective_fn(A, X_Transpose, community, weights, degrees, m, use_community_features);         
+    normalized_score = raw_score;
+     end
 end
